@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html class="touch_page">
+
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+		<meta name="format-detection" content="telephone=no" />
+		<title></title>
+		<link rel="stylesheet" type="text/css" href="./css/style.css" />
+	</head>
+
+	<body>
+		<div id="box" data-deg='0'><span id="right_btm" class="none"></span></div>
+
+		<script>
+/*感谢夜麟提供思路与核心代码*/
+			var box = document.getElementById('box');
+			var span = document.getElementById('right_btm');
+			var bh, bw, bt, bl, dcx, dcy;
+			var odeg = 0;
+			var coordinate = {
+				dx0: 0, //鼠标在box上touchstart时，鼠标的水平坐标
+				dy0: 0, //鼠标在box上touchstart时，鼠标的垂直坐标 
+				dx1: 0, //鼠标在box上touchmove时，鼠标的水平坐标
+				dy1: 0, //鼠标在box上touchmove时，鼠标的垂直坐标
+				sx0: 0, //鼠标在span上touchstart时，鼠标的水平坐标
+				sy0: 0, //鼠标在span上touchstart时，鼠标的垂直坐标
+				sx1: 0, //鼠标在span上touchmove时，鼠标的水平坐标
+				sy1: 0, //鼠标在span上touchmove时，鼠标的垂直坐标
+				bh_init: box.offsetHeight, //box原始宽度
+				bw_init: box.offsetWidth, //box原始高度
+				deg: 0 //鼠标在span上touchstart时，box的角度
+			};
+
+
+			//鼠标在box上触发touchstart事件
+			function boxStartFn(e) {
+					if (span.classList.contains('none')) {
+						span.classList.remove('none');
+						span.style.webkitTransform = 'translate('+parseInt(span.offsetWidth)/2+'px,'+parseInt(span.offsetWidth)/2+'px)';
+					}
+					var e = e || window.event;
+					var touch = e.targetTouches[0];
+					if (touch.target.nodeName == 'DIV') {
+						coordinate.dx0 = touch.pageX - box.offsetLeft;
+						coordinate.dy0 = touch.pageY - box.offsetTop;
+					}
+					box.addEventListener('touchmove', boxMoveFn, false);
+			}
+
+			//鼠标在box上触发touchMove事件
+			function boxMoveFn(e) {
+					var e = e || window.event;
+					var touch = e.targetTouches[0];
+					if (touch.target.nodeName == 'DIV') {
+						coordinate.dx1 = touch.pageX;
+						coordinate.dy1 = touch.pageY;
+						box.style.top = coordinate.dy1 - coordinate.dy0 + 'px';
+						box.style.left = coordinate.dx1 - coordinate.dx0 + 'px';
+					}
+				}
+
+			//鼠标在box上触发touchEnd事件
+			function boxEndFn(e) {
+				box.removeEventListener('touchmove', boxMoveFn, false);
+			}
+
+			box.addEventListener('touchstart', boxStartFn, false);
+			box.addEventListener('touchend', boxEndFn, false);
+
+			//鼠标在span上触发touchstart事件
+			span.addEventListener('touchstart', boxScalStartFn, false);
+			function boxScalStartFn(e) {
+					event.preventDefault();
+					var e = e || window.event;
+					var touch = e.targetTouches[0];
+					if (touch.target.nodeName == 'SPAN') {
+						coordinate.sx0 = touch.pageX;
+						coordinate.sy0 = touch.pageY;
+					}
+					bh = box.offsetHeight; //box高度
+					bw = box.offsetWidth; //box宽度
+					bt = parseInt( box.offsetTop ); //box距离文档的垂直距离
+					bl = parseInt( box.offsetLeft ); //box距离文档的水平距离
+					dcx = bw / 2 + bl ; /*box中心点的水平坐标*/
+					dcy = bh / 2 + bt ; /*box中心点的垂直坐标*/
+
+					var bx = coordinate.sx0 - dcx;
+					var by = dcy - coordinate.sy0;
+					odeg = Math.atan2(by, bx);	
+					span.addEventListener('touchmove', boxScalMoveFn, false);
+			}
+
+			//鼠标在span上触发touchMove事件
+			function boxScalMoveFn(e) {
+				var e = e || window.event;
+				var touch = e.targetTouches[0];
+				if (touch.target.nodeName == 'SPAN') {
+					coordinate.sx1 = touch.pageX;
+					coordinate.sy1 = touch.pageY;
+					var cx = coordinate.sx1 - dcx;
+					var cy = dcy - coordinate.sy1;
+					var deg2 = Math.atan2(cy, cx);
+					coordinate.deg = deg2 - odeg;
+					var newdeg = coordinate.deg + odeg;
+					odeg = newdeg;
+
+					//求c边的长度
+					var c = Math.sqrt( Math.pow(coordinate.sx1-dcx,2) + Math.pow( coordinate.sy1-dcy,2) );
+					//求a、b边的长度,由于是等腰三角形，故a、b边相等  a*a + b*b = c*c
+					var a = b = Math.sqrt(  c*c / 2 );
+
+					var w = h = 2 * a;
+
+					if( w <= coordinate.bw_init ){
+						box.style.webkitTransform = 'rotate(' + ((-newdeg) / Math.PI * 180-45) + 'deg) scale(1,1)';
+					}else{
+						var ratio = w / coordinate.bw_init;
+						box.style.webkitTransform = 'rotate(' + ((-newdeg) / Math.PI * 180-45) + 'deg) scale('+ratio+','+ratio+')';
+						span.style.webkitTransform = 'scale('+(1/ratio)+','+(1/ratio)+') translate('+ratio*parseInt(span.offsetWidth)/2+'px,'+ratio*parseInt(span.offsetWidth)/2+'px)';
+					}
+				}
+			}
+
+			function boxScalEndFn(e) {
+				span.removeEventListener('touchmove', boxScalMoveFn, false);
+			}
+			span.addEventListener('touchend', boxScalEndFn, false);
+
+			document.addEventListener('touchstart', function(){
+			}, false);
+
+		</script>
+	</body>
+</html>
